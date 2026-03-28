@@ -39,6 +39,7 @@ if (process.env.NODE_ENV !== 'production') {
 const cache = new NodeCache({ stdTTL: 600 });
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
