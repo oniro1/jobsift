@@ -1,4 +1,125 @@
-// ── STATE ──
+// ── CV ANALYSIS (placeholder — replace with real API call) ──
+const cvState = {
+  uploaded: false,
+  skills: [],
+  fileName: ''
+};
+
+function initCV() {
+  const btn = document.getElementById('cv-upload-btn');
+  const input = document.getElementById('cv-file-input');
+  if (!btn || !input) return;
+
+  btn.addEventListener('click', () => input.click());
+  input.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    analyzeCV(file);
+  });
+}
+
+async function analyzeCV(file) {
+  const btn = document.getElementById('cv-upload-btn');
+  btn.textContent = 'Analyzing...';
+  btn.disabled = true;
+
+  // PLACEHOLDER — sostituire con vera chiamata API Anthropic
+  await new Promise(r => setTimeout(r, 1800));
+
+  // Simulated extracted skills based on filename hints
+  const mockSkills = ['JavaScript', 'Node.js', 'React', 'MongoDB', 'REST APIs', 'Git', 'CSS'];
+
+  cvState.uploaded = true;
+  cvState.skills = mockSkills;
+  cvState.fileName = file.name;
+
+  // Update UI
+  document.getElementById('cv-filename').textContent = '✓ ' + file.name;
+  const skillsEl = document.getElementById('cv-skills');
+  skillsEl.innerHTML = mockSkills.map(s => `<span class="cv-skill">${s}</span>`).join('');
+  document.getElementById('cv-status').classList.add('visible');
+
+  btn.innerHTML = `<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Change CV`;
+  btn.disabled = false;
+
+  showToast('CV analyzed! Job matches updated.', 'success');
+  showGaps();
+
+  if (state.jobs.length > 0) renderResults();
+}
+
+function getCompanyDomain(company, url) {
+  try {
+    if (url && url !== '#') {
+      const u = new URL(url);
+      return u.hostname.replace('www.', '');
+    }
+  } catch {}
+  return null;
+}
+
+function companyLogoHtml(company, url) {
+  const domain = getCompanyDomain(company, url);
+  const initial = (company || '?')[0].toUpperCase();
+  if (domain) {
+    return `<div class="company-logo">
+      <img src="https://logo.clearbit.com/${domain}"
+           alt="${escHtml(company)}"
+           onerror="this.parentElement.innerHTML='<span class=\\"company-logo-placeholder\\">${initial}</span>'">
+    </div>`;
+  }
+  return `<div class="company-logo"><span class="company-logo-placeholder">${initial}</span></div>`;
+}
+
+
+  if (!cvState.uploaded) return null;
+
+  const jobText = (job.title + ' ' + (job.tags || []).join(' ')).toLowerCase();
+  const mySkills = cvState.skills.map(s => s.toLowerCase());
+
+  let matches = 0;
+  for (const skill of mySkills) {
+    if (jobText.includes(skill.toLowerCase())) matches++;
+  }
+
+  const score = Math.round((matches / mySkills.length) * 100);
+
+  if (score >= 60) return { level: 'green', label: 'Strong match', score };
+  if (score >= 30) return { level: 'yellow', label: 'Partial match', score };
+  return { level: 'red', label: 'Low match', score };
+}
+
+function matchBadgeHtml(job) {
+  const match = getMatchScore(job);
+  if (!match) return '';
+  return `<span class="match-badge match-${match.level}">
+    <span class="match-dot"></span>${match.label} ${match.score}%
+  </span>`;
+}
+
+function showGaps() {
+  const gaps = [
+    { skill: 'TypeScript', tip: 'Free course on typescriptlang.org — no certification' },
+    { skill: 'Docker', tip: 'Docker official docs + Play with Docker (free, no cert)' },
+    { skill: 'AWS', tip: 'AWS Free Tier + Cloud Practitioner cert (~$100)' },
+  ];
+
+  const card = document.getElementById('gaps-card');
+  const list = document.getElementById('gaps-list');
+
+  list.innerHTML = gaps.map(g => `
+    <div class="gap-item">
+      <div class="gap-icon">⚡</div>
+      <div class="gap-text">
+        <strong>${g.skill}</strong>
+        <span>${g.tip}</span>
+      </div>
+    </div>`).join('');
+
+  card.classList.add('visible');
+}
+
+
 const state = {
   jobs: [],
   allJobs: [],
@@ -16,6 +137,7 @@ const JOBS_PER_PAGE = 12;
 // ── INIT ──
 document.addEventListener('DOMContentLoaded', () => {
   updateNav();
+  initCV();
 
   document.getElementById('q-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') search();
@@ -148,6 +270,7 @@ function jobCard(job, i) {
   return `
     <a class="job-card" href="${escHtml(job.url || '#')}" target="_blank" rel="noopener"
        style="animation-delay:${delay}">
+      ${companyLogoHtml(job.company, job.url)}
       <div class="job-main">
         <div class="job-company">${escHtml(job.company || 'Company')}</div>
         <div class="job-title">${escHtml(job.title)}</div>
@@ -159,6 +282,7 @@ function jobCard(job, i) {
           ${job.posted ? `<span>${timeAgo(job.posted)}</span>` : ''}
         </div>
         <div class="job-tags">${tags}</div>
+        ${matchBadgeHtml(job) ? `<div style="margin-top:8px">${matchBadgeHtml(job)}</div>` : ''}
       </div>
       <div class="job-side">
         ${job.salary ? `<div class="job-salary">£${escHtml(job.salary)}</div>` : ''}
