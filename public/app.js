@@ -72,6 +72,7 @@ function companyLogoHtml(company, url) {
 }
 
 
+function getMatchScore(job) {
   if (!cvState.uploaded) return null;
 
   const jobText = (job.title + ' ' + (job.tags || []).join(' ')).toLowerCase();
