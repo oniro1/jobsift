@@ -44,8 +44,8 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrcAttr: ["'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      scriptSrcAttr: ["'none'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
@@ -117,8 +117,9 @@ app.post('/api/auth/register', async (req, res) => {
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
     res.json({ token, user: { id: user._id, email: user.email, name: user.name } });
   } catch (error) {
+    console.log('REGISTRATION ERROR:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
     logger.error('Registration error', { error: error.message });
-    res.status(500).json({ error: 'Registration failed' });
+    res.status(500).json({ error: error.message || JSON.stringify(error) || 'Registration failed' });
   }
 });
 
