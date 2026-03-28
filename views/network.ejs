@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+</head>
+<body>
+
+<%- include('partials/nav') %>
+
+<div class="network-layout">
+
+  <!-- LEFT: Manage invitations -->
+  <div class="network-left">
+    <div class="network-card">
+      <div class="network-card-title">Manage invitations</div>
+      <div id="pending-invitations">
+        <div style="color:var(--ink-3);font-size:14px">Loading…</div>
+      </div>
+    </div>
+
+    <div class="network-card" style="margin-top:12px">
+      <div class="network-card-title">Your connections</div>
+      <div id="accepted-connections">
+        <div style="color:var(--ink-3);font-size:14px">Loading…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: People you may know -->
+  <div class="network-right">
+    <div class="network-card">
+      <div class="network-card-title">People you may know</div>
+      <div class="network-search-wrap">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input class="network-search-input" type="text" id="people-search" placeholder="Search by name or role">
+      </div>
+      <div id="people-grid"></div>
+    </div>
+  </div>
+
+</div>
+
+<%- include('partials/footer') %>
+
+<script>
+  window.CURRENT_USER = <%- JSON.stringify(user) %>;
+</script>
+<script src="/js/network.js"></script>
+</body>
+</html>

@@ -127,6 +127,12 @@ app.get('/logout', (req, res) => {
   res.redirect('/');
 });
 
+app.get('/network', async (req, res) => {
+  const user = await getUserFromCookie(req);
+  if (!user) return res.redirect('/login?redirect=/network');
+  res.render('network', { user, page: 'network', title: 'My Network — JobSift' });
+});
+
 app.get('/feed', async (req, res) => {
   const user = await getUserFromCookie(req);
   if (!user) return res.redirect('/login?redirect=/feed');
@@ -149,6 +155,8 @@ app.get('/profile/:id', async (req, res) => {
       name: profileDoc.name,
       email: profileDoc.email,
       profile: profileDoc.profile || {},
+      experience: profileDoc.experience || [],
+      education: profileDoc.education || [],
     };
     res.render('profile', {
       user,
@@ -278,6 +286,64 @@ app.post('/api/user/avatar', auth, async (req, res) => {
     logger.error('Avatar upload error', { error: e.message });
     res.status(500).json({ error: 'Failed to save avatar' });
   }
+});
+
+// ── EXPERIENCE ──
+app.post('/api/user/experience', auth, async (req, res) => {
+  try {
+    const { title, company, location, startDate, endDate, current, description } = req.body;
+    if (!title || !company) return res.status(400).json({ error: 'Title and company required' });
+    req.user.experience.push({ title, company, location, startDate, endDate, current, description });
+    await req.user.save();
+    res.json(req.user.experience[req.user.experience.length - 1]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/user/experience/:id', auth, async (req, res) => {
+  try {
+    const exp = req.user.experience.id(req.params.id);
+    if (!exp) return res.status(404).json({ error: 'Not found' });
+    Object.assign(exp, req.body);
+    await req.user.save();
+    res.json(exp);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/user/experience/:id', auth, async (req, res) => {
+  try {
+    req.user.experience.pull(req.params.id);
+    await req.user.save();
+    res.json({ message: 'Deleted' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── EDUCATION ──
+app.post('/api/user/education', auth, async (req, res) => {
+  try {
+    const { school, degree, field, startYear, endYear } = req.body;
+    if (!school) return res.status(400).json({ error: 'School required' });
+    req.user.education.push({ school, degree, field, startYear, endYear });
+    await req.user.save();
+    res.json(req.user.education[req.user.education.length - 1]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/user/education/:id', auth, async (req, res) => {
+  try {
+    const edu = req.user.education.id(req.params.id);
+    if (!edu) return res.status(404).json({ error: 'Not found' });
+    Object.assign(edu, req.body);
+    await req.user.save();
+    res.json(edu);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/user/education/:id', auth, async (req, res) => {
+  try {
+    req.user.education.pull(req.params.id);
+    await req.user.save();
+    res.json({ message: 'Deleted' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/user/save-job', auth, async (req, res) => {

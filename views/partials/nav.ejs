@@ -1,58 +1,77 @@
 <nav>
-  <a href="/" class="logo">Job<span>Sift</span></a>
+  <div class="nav-left">
+    <a href="/" class="logo">Job<span>Sift</span></a>
+    <div class="nav-search">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input class="nav-search-input" type="text" placeholder="Search"
+        onkeydown="if(event.key==='Enter'&&this.value.trim())window.location.href='/?q='+encodeURIComponent(this.value.trim())">
+    </div>
+  </div>
 
-  <div class="nav-links">
-    <a href="/" class="nav-link <%= page === 'home' ? 'active' : '' %>">Jobs</a>
+  <div class="nav-center">
+    <a href="/" class="nav-icon-btn <%= page === 'home' ? 'active' : '' %>">
+      <svg width="22" height="22" fill="<%= page==='home'?'currentColor':'none' %>" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>Home</span>
+    </a>
     <% if (user) { %>
-    <a href="/feed" class="nav-link <%= page === 'feed' ? 'active' : '' %>">Feed</a>
-    <a href="/profile/<%= user.id %>" class="nav-link <%= page === 'profile' ? 'active' : '' %>">Profile</a>
+    <a href="/network" class="nav-icon-btn <%= page === 'network' ? 'active' : '' %>">
+      <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span>My Network</span>
+    </a>
+    <a href="/" class="nav-icon-btn <%= page === 'jobs' ? 'active' : '' %>">
+      <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+      <span>Jobs</span>
+    </a>
+    <a href="/feed" class="nav-icon-btn <%= page === 'feed' ? 'active' : '' %>">
+      <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span>Messaging</span>
+    </a>
     <% } %>
   </div>
 
-  <div class="nav-actions" id="nav-actions">
+  <div class="nav-right">
     <% if (user) { %>
-    <div style="position:relative" id="user-menu-wrap">
-      <div class="user-chip" id="user-chip">
-        <div class="avatar">
-        <% if (user.profile && user.profile.avatar) { %>
-          <img src="<%= user.profile.avatar %>" alt="<%= user.name %>">
-        <% } else { %>
-          <%= user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2) %>
-        <% } %>
-      </div>
-        <span class="user-name"><%= user.name %></span>
-        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-left:2px;color:var(--ink-3)"><polyline points="6 9 12 15 18 9"/></svg>
-      </div>
-      <div id="user-dropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(26,26,24,.14),0 0 0 1px rgba(26,26,24,.08);min-width:200px;z-index:200;overflow:hidden;">
-        <div style="padding:14px 16px;border-bottom:1px solid var(--paper-2)">
-          <div style="font-weight:600;font-size:14px;color:var(--ink)"><%= user.name %></div>
-          <div style="font-size:12px;color:var(--ink-3)"><%= user.email || '' %></div>
+    <div style="position:relative;height:100%;display:flex;align-items:stretch" id="user-menu-wrap">
+      <button class="nav-me" id="user-chip">
+        <div class="nav-avatar">
+          <% if (user.profile && user.profile.avatar) { %>
+            <img src="<%= user.profile.avatar %>" alt="<%= user.name %>">
+          <% } else { %>
+            <%= user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2) %>
+          <% } %>
         </div>
-        <div style="padding:6px">
-          <a href="/profile/<%= user.id %>" class="dropdown-item">
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            My Profile
-          </a>
-          <a href="/feed" class="dropdown-item">
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-            Feed
-          </a>
-          <a href="/" class="dropdown-item">
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            Search Jobs
-          </a>
+        <span class="nav-me-label">Me <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="margin-left:1px"><polyline points="6 9 12 15 18 9"/></svg></span>
+      </button>
+      <div id="user-dropdown" style="display:none;position:absolute;top:calc(100% + 2px);right:0;background:#fff;border-radius:4px;box-shadow:0 0 0 1px rgba(0,0,0,.12),0 4px 20px rgba(0,0,0,.15);min-width:240px;z-index:200;overflow:hidden;">
+        <div style="padding:16px;border-bottom:1px solid rgba(0,0,0,.08)">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+            <div class="nav-avatar" style="width:56px;height:56px;font-size:20px;flex-shrink:0">
+              <% if (user.profile && user.profile.avatar) { %>
+                <img src="<%= user.profile.avatar %>" alt="<%= user.name %>">
+              <% } else { %>
+                <%= user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2) %>
+              <% } %>
+            </div>
+            <div>
+              <div style="font-weight:600;font-size:15px;color:rgba(0,0,0,.9)"><%= user.name %></div>
+              <div style="font-size:12px;color:rgba(0,0,0,.55);margin-top:1px"><%= user.email || '' %></div>
+            </div>
+          </div>
+          <a href="/profile/<%= user.id %>" style="display:flex;align-items:center;justify-content:center;padding:6px 16px;border-radius:24px;border:1.5px solid var(--accent);color:var(--accent);font-size:14px;font-weight:600;text-decoration:none;transition:background .15s" onmouseover="this.style.background='#ebf3fc'" onmouseout="this.style.background=''">View Profile</a>
         </div>
-        <div style="padding:6px;border-top:1px solid var(--paper-2)">
-          <a href="/logout" class="dropdown-item" style="color:#c0392b;">
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            Sign out
-          </a>
+        <div style="padding:6px 0;border-bottom:1px solid rgba(0,0,0,.08)">
+          <a href="/network" class="dropdown-item">My Network</a>
+          <a href="/feed" class="dropdown-item">Messaging</a>
+          <a href="/" class="dropdown-item">Job Search</a>
+        </div>
+        <div style="padding:6px 0">
+          <a href="/logout" class="dropdown-item" style="color:#c0392b">Sign Out</a>
         </div>
       </div>
     </div>
     <% } else { %>
-    <a href="/login" class="btn btn-ghost">Sign in</a>
-    <a href="/register" class="btn btn-primary">Join free</a>
+    <a href="/login" class="btn-nav-signin">Sign in</a>
+    <a href="/register" class="btn-nav-join">Join now</a>
     <% } %>
   </div>
 </nav>
@@ -66,8 +85,6 @@
     e.stopPropagation();
     dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
   });
-  document.addEventListener('click', function() {
-    if (dd) dd.style.display = 'none';
-  });
+  document.addEventListener('click', function() { if (dd) dd.style.display = 'none'; });
 })();
 </script>
