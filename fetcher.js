@@ -31,6 +31,8 @@ async function fetchJobs(query = 'developer', country = 'gb', page = 1) {
       salary_min: job.job_min_salary || 0,
       salary_max: job.job_max_salary || 0,
       redirect_url: job.job_apply_link || job.job_google_link || '#',
+      employer_logo: job.employer_logo || null,
+      employer_website: job.employer_website || null,
       description: job.job_description || 'No description available',
       created: job.job_posted_at_datetime_utc || new Date().toISOString(),
       tags: job.job_required_skills || [],

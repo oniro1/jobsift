@@ -30,20 +30,58 @@ async function analyzeCV(file) {
   if (state.jobs.length > 0) renderResults();
 }
 
+// Known job-board hostnames — never use these as company logos
+const JOB_BOARD_HOSTS = new Set([
+  'indeed.com','linkedin.com','reed.co.uk','totaljobs.com','glassdoor.com',
+  'monster.com','ziprecruiter.com','simplyhired.com','careerbuilder.com',
+  'jobsite.co.uk','cv-library.co.uk','cwjobs.co.uk','jobs.google.com',
+  'wellfound.com','otta.com','workable.com','greenhouse.io','lever.co',
+  'myworkdayjobs.com','taleo.net','icims.com','bamboohr.com',
+  'jobs.jsearch.com','api.jsearch.com',
+]);
+
 function getCompanyDomain(url) {
   try {
-    if (url && url !== '#') return new URL(url).hostname.replace('www.', '');
+    if (!url || url === '#') return null;
+    const host = new URL(url).hostname.replace('www.', '');
+    // Only return the domain if it's not a job board
+    return JOB_BOARD_HOSTS.has(host) ? null : host;
   } catch {}
   return null;
 }
 
-function companyLogoHtml(company, url) {
-  const domain = getCompanyDomain(url);
+// Guess company domain from its display name (fallback only)
+function guessCompanyDomain(name) {
+  const clean = (name || '')
+    .toLowerCase()
+    .replace(/\b(inc|ltd|llc|corp|corporation|limited|group|co|company|plc|gmbh|ag|sa|srl|bv|nv)\b\.?/g, '')
+    .replace(/[^a-z0-9]/g, '');
+  return clean ? clean + '.com' : null;
+}
+
+function companyLogoHtml(company, job) {
   const initial = (company || '?')[0].toUpperCase();
-  if (domain) {
-    return `<div class="company-logo"><img src="https://logo.clearbit.com/${domain}" alt="${escHtml(company)}" onerror="this.parentElement.innerHTML='<span class=\\"company-logo-initial\\">${initial}</span>'"></div>`;
+  const fallback = `<span class="company-logo-initial">${initial}</span>`;
+
+  // 1 — Direct logo URL from the API (best quality, no guessing needed)
+  if (job.logo) {
+    return `<div class="company-logo"><img src="${escHtml(job.logo)}" alt="${escHtml(company)}" loading="lazy" onerror="this.parentElement.innerHTML='${fallback}'"></div>`;
   }
-  return `<div class="company-logo"><span class="company-logo-initial">${initial}</span></div>`;
+
+  // 2 — Clearbit using the employer's own website domain
+  const websiteDomain = getCompanyDomain(job.companyWebsite);
+  if (websiteDomain) {
+    return `<div class="company-logo"><img src="https://logo.clearbit.com/${websiteDomain}" alt="${escHtml(company)}" loading="lazy" onerror="this.onerror=null;this.src='https://logo.clearbit.com/${guessCompanyDomain(company)||websiteDomain}';this.onerror=function(){this.parentElement.innerHTML='${fallback}'}"></div>`;
+  }
+
+  // 3 — Clearbit using a best-effort guess from the company name
+  const guessedDomain = guessCompanyDomain(company);
+  if (guessedDomain) {
+    return `<div class="company-logo"><img src="https://logo.clearbit.com/${guessedDomain}" alt="${escHtml(company)}" loading="lazy" onerror="this.parentElement.innerHTML='${fallback}'"></div>`;
+  }
+
+  // 4 — Initials only
+  return `<div class="company-logo">${fallback}</div>`;
 }
 
 function getMatchScore(job) {
@@ -162,7 +200,7 @@ function jobCard(job, i) {
   const badge = matchBadgeHtml(job);
   return `
     <a class="job-card" href="${escHtml(job.url || '#')}" target="_blank" rel="noopener" style="animation-delay:${i*40}ms">
-      ${companyLogoHtml(job.company, job.url)}
+      ${companyLogoHtml(job.company, job)}
       <div class="job-main">
         <div class="job-company">${escHtml(job.company || 'Company')}</div>
         <div class="job-title">${escHtml(job.title)}</div>

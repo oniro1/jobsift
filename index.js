@@ -401,6 +401,8 @@ app.get('/api/jobs', validateQuery, async (req, res) => {
       location: job.location && job.location.display_name,
       salary: job.salary_min ? job.salary_min.toLocaleString() : null,
       url: job.redirect_url,
+      logo: job.employer_logo || null,
+      companyWebsite: job.employer_website || null,
       tags: extractTags(job),
       requirements: extractRequirements(job.description),
       posted: job.created
