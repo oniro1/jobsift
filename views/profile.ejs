@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+</head>
+<body>
+
+<%- include('partials/nav') %>
+
+<div class="profile-layout">
+
+  <!-- LEFT: Profile card -->
+  <div>
+    <div class="profile-card">
+      <div class="profile-banner"></div>
+      <div class="profile-body">
+        <div class="profile-avatar-wrap" id="profile-avatar-wrap">
+          <div class="profile-avatar <%= (profileUser.profile && profileUser.profile.avatar) ? 'has-image' : '' %>" id="profile-avatar">
+            <% if (profileUser.profile && profileUser.profile.avatar) { %>
+              <img src="<%= profileUser.profile.avatar %>" alt="<%= profileUser.name %>">
+            <% } else { %>
+              <%= profileUser.name.split(' ').map(function(n){ return n[0]; }).join('').toUpperCase().slice(0,2) %>
+            <% } %>
+          </div>
+          <% if (isOwnProfile) { %>
+          <label class="avatar-change-btn" for="avatar-file-input" title="Change photo">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          </label>
+          <input type="file" id="avatar-file-input" accept="image/*" style="display:none">
+          <% } %>
+        </div>
+        <div class="profile-name"><%= profileUser.name %></div>
+        <div class="profile-headline" id="prof-headline"><%= (profileUser.profile && profileUser.profile.headline) || '' %></div>
+        <% if (profileUser.profile && profileUser.profile.location) { %>
+        <div class="profile-location">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
+          <span id="prof-location"><%= profileUser.profile.location %></span>
+        </div>
+        <% } %>
+        <div class="profile-stats">
+          <div class="profile-stat"><strong id="stat-connections">—</strong><span>connections</span></div>
+          <div class="profile-stat"><strong id="stat-posts">—</strong><span>posts</span></div>
+        </div>
+        <div class="profile-actions">
+          <% if (isOwnProfile) { %>
+          <button class="btn btn-ghost btn-sm" id="edit-profile-btn">Edit profile</button>
+          <% } else { %>
+          <button class="btn btn-primary btn-sm" id="connect-btn" data-uid="<%= profileUser.id %>">+ Connect</button>
+          <button class="btn btn-ghost btn-sm" id="message-btn" data-uid="<%= profileUser.id %>" data-name="<%= profileUser.name %>">Message</button>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: About + Posts -->
+  <div>
+
+    <!-- About -->
+    <div class="profile-section">
+      <div class="profile-section-title">About</div>
+
+      <!-- View mode -->
+      <div id="about-view">
+        <div class="profile-bio" id="prof-bio">
+          <%= (profileUser.profile && profileUser.profile.bio) ? profileUser.profile.bio : (isOwnProfile ? 'Add a short bio to let people know more about you.' : 'No bio yet.') %>
+        </div>
+      </div>
+
+      <!-- Edit mode (own profile only) -->
+      <% if (isOwnProfile) { %>
+      <div class="edit-form" id="edit-form">
+        <div class="form-group">
+          <label class="form-label">Headline</label>
+          <input class="form-input" type="text" id="edit-headline" value="<%= (profileUser.profile && profileUser.profile.headline) || '' %>" placeholder="e.g. Full-stack developer at Acme">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Location</label>
+          <input class="form-input" type="text" id="edit-location" value="<%= (profileUser.profile && profileUser.profile.location) || '' %>" placeholder="e.g. London, UK">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bio</label>
+          <textarea class="form-input" id="edit-bio" placeholder="Tell people about yourself…"><%= (profileUser.profile && profileUser.profile.bio) || '' %></textarea>
+        </div>
+        <div class="form-error" id="edit-error"></div>
+        <div class="edit-actions">
+          <button class="btn btn-ghost btn-sm" id="edit-cancel-btn">Cancel</button>
+          <button class="btn btn-primary btn-sm" id="edit-save-btn">Save changes</button>
+        </div>
+      </div>
+      <% } %>
+    </div>
+
+    <!-- Posts -->
+    <div class="profile-section">
+      <div class="profile-section-title">Posts</div>
+      <div id="profile-posts">
+        <div style="text-align:center;padding:32px;color:var(--ink-3);font-size:14px">Loading posts…</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Avatar lightbox -->
+<div id="avatar-lightbox">
+  <div id="avatar-lightbox-backdrop"></div>
+  <div id="avatar-lightbox-body">
+    <div id="avatar-lightbox-inner"></div>
+    <div id="avatar-lightbox-name"><%= profileUser.name %></div>
+  </div>
+  <button id="avatar-lightbox-close" aria-label="Close">&times;</button>
+</div>
+
+<%- include('partials/footer') %>
+
+<script>
+  window.CURRENT_USER = <%- JSON.stringify(user) %>;
+  window.PROFILE_USER = <%- JSON.stringify(profileUser) %>;
+  window.IS_OWN_PROFILE = <%= isOwnProfile %>;
+</script>
+<script src="/js/profile.js"></script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+</head>
+<body>
+
+<%- include('partials/nav') %>
+
+<div class="hero">
+  <div class="hero-tag">Live jobs from 12 countries</div>
+  <h1>Find work that<br><em>matters</em> to you</h1>
+  <p class="hero-sub">Thousands of roles aggregated from top job boards worldwide — filtered, tagged, and ready.</p>
+
+  <div class="search-card">
+    <div class="search-row">
+      <div class="search-field">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="q-input" placeholder="Job title, keyword…" value="developer">
+      </div>
+      <div class="search-field" style="flex: 0 0 180px; min-width: 140px;">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
+        <select id="country-select">
+          <option value="worldwide">🌍 Worldwide</option>
+          <option value="gb">🇬🇧 United Kingdom</option>
+          <option value="us">🇺🇸 United States</option>
+          <option value="de">🇩🇪 Germany</option>
+          <option value="fr">🇫🇷 France</option>
+          <option value="it">🇮🇹 Italy</option>
+          <option value="es">🇪🇸 Spain</option>
+          <option value="nl">🇳🇱 Netherlands</option>
+          <option value="ca">🇨🇦 Canada</option>
+          <option value="au">🇦🇺 Australia</option>
+          <option value="in">🇮🇳 India</option>
+          <option value="br">🇧🇷 Brazil</option>
+          <option value="za">🇿🇦 South Africa</option>
+        </select>
+      </div>
+      <button class="search-btn" id="search-btn">Search</button>
+    </div>
+
+    <div class="search-tags">
+      <span class="search-tags-label">Quick:</span>
+      <span class="tag-pill" data-query="react developer">React</span>
+      <span class="tag-pill" data-query="python engineer">Python</span>
+      <span class="tag-pill" data-query="product manager">Product</span>
+      <span class="tag-pill" data-query="data scientist">Data Science</span>
+      <span class="tag-pill" data-query="devops engineer">DevOps</span>
+      <span class="tag-pill" data-query="ux designer">Design</span>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="cv-banner">
+    <div class="cv-banner-icon">
+      <svg width="22" height="22" fill="none" stroke="#d4521e" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    </div>
+    <div class="cv-banner-text">
+      <strong>Upload your CV for AI job matching</strong>
+      <span>Get a match score for every job — green, yellow, or red based on your profile</span>
+    </div>
+    <button class="cv-upload-btn" id="cv-upload-btn">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Upload CV (PDF)
+    </button>
+    <input type="file" id="cv-file-input" accept=".pdf,.doc,.docx" style="display:none">
+    <div class="cv-status" id="cv-status">
+      <span id="cv-filename" style="font-size:13px;font-weight:500;color:var(--ink)"></span>
+      <div class="cv-skills" id="cv-skills"></div>
+    </div>
+  </div>
+
+  <div class="gaps-card" id="gaps-card">
+    <div class="gaps-title">Skill gaps to work on</div>
+    <div id="gaps-list"></div>
+  </div>
+
+  <div class="results-header" id="results-header" style="display:none">
+    <div class="results-count" id="results-count"></div>
+    <select class="sort-select" id="sort-select">
+      <option value="date">Newest first</option>
+      <option value="salary">Highest salary</option>
+      <option value="title">A → Z</option>
+    </select>
+  </div>
+
+  <div class="jobs-grid" id="jobs-grid">
+    <div class="state-message">
+      <span class="icon">🔍</span>
+      <h3>Search for your next role</h3>
+      <p>Use the search above to find jobs from top companies worldwide.</p>
+    </div>
+  </div>
+
+  <div class="pagination" id="pagination" style="display:none"></div>
+</div>
+
+<%- include('partials/footer') %>
+
+<script>
+  window.CURRENT_USER = <%- JSON.stringify(user) %>;
+</script>
+<script src="/js/app.js"></script>
+</body>
+</html>

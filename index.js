@@ -1,9 +1,11 @@
 require('dotenv').config();
 
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const cookieParser = require('cookie-parser');
 const winston = require('winston');
 const NodeCache = require('node-cache');
 const mongoose = require('mongoose');
@@ -42,14 +44,19 @@ if (process.env.NODE_ENV !== 'production') {
 const cache = new NodeCache({ stdTTL: 600 });
 
 const app = express();
-app.use(helmet()); // Security headers
+app.set('trust proxy', 1);
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors());
-app.use(express.json()); // Parse JSON bodies
+app.use(express.json());
+app.use(cookieParser());
 
 // Rate limiting: 100 requests per 15 minutes per IP
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: 'Too many requests from this IP, please try again later.',
   handler: (req, res) => {
     logger.warn('Rate limit exceeded', { ip: req.ip, url: req.url });
@@ -58,7 +65,105 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-app.use(express.static('public'));
+// Helper: get user object from httpOnly cookie
+async function getUserFromCookie(req) {
+  const token = req.cookies.token;
+  if (!token || !process.env.JWT_SECRET) return null;
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id).select('-password');
+    if (!user) return null;
+    return { id: user._id, name: user.name, email: user.email, profile: user.profile || {} };
+  } catch {
+    return null;
+  }
+}
+
+// Cookie options helper
+function cookieOpts() {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  };
+}
+
+// ── PAGE ROUTES ──
+
+app.get('/', async (req, res) => {
+  const user = await getUserFromCookie(req);
+  res.render('index', {
+    user,
+    page: 'home',
+    title: 'JobSift — Find Your Next Role',
+  });
+});
+
+app.get('/login', async (req, res) => {
+  const user = await getUserFromCookie(req);
+  if (user) return res.redirect('/');
+  res.render('login', {
+    user: null,
+    page: 'login',
+    title: 'Sign in — JobSift',
+    error: null,
+  });
+});
+
+app.get('/register', async (req, res) => {
+  const user = await getUserFromCookie(req);
+  if (user) return res.redirect('/');
+  res.render('register', {
+    user: null,
+    page: 'register',
+    title: 'Join free — JobSift',
+    error: null,
+  });
+});
+
+app.get('/logout', (req, res) => {
+  res.clearCookie('token');
+  res.redirect('/');
+});
+
+app.get('/feed', async (req, res) => {
+  const user = await getUserFromCookie(req);
+  if (!user) return res.redirect('/login?redirect=/feed');
+  res.render('feed', {
+    user,
+    page: 'feed',
+    title: 'Feed — JobSift',
+  });
+});
+
+app.get('/profile/:id', async (req, res) => {
+  const user = await getUserFromCookie(req);
+  if (!user) return res.redirect('/login');
+  if (!mongoose.connection.readyState) return res.redirect('/');
+  try {
+    const profileDoc = await User.findById(req.params.id).select('-password');
+    if (!profileDoc) return res.redirect('/');
+    const profileUser = {
+      id: profileDoc._id,
+      name: profileDoc.name,
+      email: profileDoc.email,
+      profile: profileDoc.profile || {},
+    };
+    res.render('profile', {
+      user,
+      profileUser,
+      isOwnProfile: String(user.id) === req.params.id,
+      page: 'profile',
+      title: `${profileDoc.name} — JobSift`,
+    });
+  } catch (e) {
+    res.redirect('/');
+  }
+});
+
+// Static assets (CSS, JS, images) — index: false so EJS handles /
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
 // Input validation middleware
 function validateQuery(req, res, next) {
@@ -78,7 +183,7 @@ function validateQuery(req, res, next) {
   next();
 }
 
-// Auth routes
+// ── AUTH API ROUTES ──
 app.post('/api/auth/register', async (req, res) => {
   if (!mongoose.connection.readyState) {
     return res.status(503).json({ error: 'Database not available' });
@@ -97,7 +202,6 @@ app.post('/api/auth/register', async (req, res) => {
     const user = new User({ email, password, name });
     await user.save();
 
-    // Send welcome email
     try {
       await sendWelcomeEmail(email, name);
     } catch (emailError) {
@@ -105,6 +209,7 @@ app.post('/api/auth/register', async (req, res) => {
     }
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    res.cookie('token', token, cookieOpts());
     res.json({ token, user: { id: user._id, email: user.email, name: user.name } });
   } catch (error) {
     logger.error('Registration error', { error: error.message });
@@ -124,6 +229,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    res.cookie('token', token, cookieOpts());
     res.json({ token, user: { id: user._id, email: user.email, name: user.name } });
   } catch (error) {
     logger.error('Login error', { error: error.message });
@@ -131,7 +237,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Protected routes
+// ── USER API ROUTES ──
 app.get('/api/user/profile', auth, async (req, res) => {
   if (!mongoose.connection.readyState) {
     return res.status(503).json({ error: 'Database not available' });
@@ -146,12 +252,31 @@ app.put('/api/user/profile', auth, async (req, res) => {
   try {
     const { name, profile } = req.body;
     if (name) req.user.name = name;
-    if (profile) req.user.profile = { ...req.user.profile, ...profile };
+    if (profile) {
+      req.user.profile = { ...req.user.profile, ...profile };
+      req.user.markModified('profile');
+    }
     await req.user.save();
     res.json({ user: req.user });
   } catch (error) {
     logger.error('Profile update error', { error: error.message });
     res.status(500).json({ error: error.message || 'Failed to update profile' });
+  }
+});
+
+app.post('/api/user/avatar', auth, async (req, res) => {
+  try {
+    const { avatar } = req.body;
+    if (!avatar) return res.status(400).json({ error: 'No image provided' });
+    if (!avatar.startsWith('data:image/')) return res.status(400).json({ error: 'Invalid image format' });
+    if (avatar.length > 400000) return res.status(400).json({ error: 'Image too large (max ~300 KB)' });
+    req.user.profile = { ...req.user.profile, avatar };
+    req.user.markModified('profile');
+    await req.user.save();
+    res.json({ avatar });
+  } catch (e) {
+    logger.error('Avatar upload error', { error: e.message });
+    res.status(500).json({ error: 'Failed to save avatar' });
   }
 });
 
@@ -176,13 +301,13 @@ app.get('/api/user/saved-jobs', auth, async (req, res) => {
     return res.status(503).json({ error: 'Database not available' });
   }
   try {
-    // In a real app, you'd fetch the actual job details
     res.json({ savedJobs: req.user.savedJobs });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch saved jobs' });
   }
 });
 
+// ── JOBS API ──
 app.get('/api/jobs', validateQuery, async (req, res) => {
   try {
     const { q = 'developer', country = 'worldwide', tags, page = 1 } = req.query;
@@ -191,7 +316,6 @@ app.get('/api/jobs', validateQuery, async (req, res) => {
       return res.status(400).json({ error: 'Invalid page number' });
     }
 
-    // Create cache key
     const cacheKey = `${q}-${country}-${tags || ''}-${pageNum}`;
     const cachedResult = cache.get(cacheKey);
     if (cachedResult) {
@@ -222,7 +346,6 @@ app.get('/api/jobs', validateQuery, async (req, res) => {
       logger.info('Filtered jobs by tags', { originalCount: raw.length, filteredCount: jobs.length, tags });
     }
 
-    // Cache the result
     cache.set(cacheKey, jobs);
     logger.info('Cached result', { cacheKey });
 

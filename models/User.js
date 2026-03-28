@@ -16,6 +16,12 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  profile: {
+    headline: { type: String, default: '' },
+    location: { type: String, default: '' },
+    bio: { type: String, default: '' },
+    avatar: { type: String, default: '' },
+  },
   savedJobs: [{
     type: String
   }],

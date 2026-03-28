@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+</head>
+<body>
+
+<%- include('partials/nav') %>
+
+<div class="layout">
+
+  <!-- LEFT SIDEBAR -->
+  <div class="sidebar-left">
+    <div class="mini-profile">
+      <div class="mini-profile-banner"></div>
+      <div class="mini-profile-body">
+        <div class="mini-avatar">
+          <% if (user.profile && user.profile.avatar) { %>
+            <img src="<%= user.profile.avatar %>" alt="<%= user.name %>">
+          <% } else { %>
+            <%= user.name.split(' ').map(function(n){ return n[0]; }).join('').toUpperCase().slice(0,2) %>
+          <% } %>
+        </div>
+        <div class="mini-name"><%= user.name %></div>
+        <div class="mini-headline" id="mini-headline"></div>
+        <div class="mini-stats">
+          <div class="mini-stat"><strong id="stat-connections">0</strong><span>connections</span></div>
+          <div class="mini-stat"><strong id="stat-posts">0</strong><span>posts</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connections-card" id="pending-card" style="display:none">
+      <div class="connections-title">Pending requests</div>
+      <div id="pending-list"></div>
+    </div>
+  </div>
+
+  <!-- FEED -->
+  <div class="feed">
+    <div class="compose-card">
+      <div class="compose-row">
+        <div class="compose-avatar">
+          <% if (user.profile && user.profile.avatar) { %>
+            <img src="<%= user.profile.avatar %>" alt="<%= user.name %>">
+          <% } else { %>
+            <%= user.name.split(' ').map(function(n){ return n[0]; }).join('').toUpperCase().slice(0,2) %>
+          <% } %>
+        </div>
+        <textarea class="compose-input" id="compose-input" placeholder="Share an update, achievement, or job opportunity..." rows="1"></textarea>
+      </div>
+      <div class="compose-actions" id="compose-actions" style="display:none">
+        <div class="compose-type-btns">
+          <button class="type-btn active" data-type="update">📝 Update</button>
+          <button class="type-btn" data-type="achievement">🏆 Achievement</button>
+          <button class="type-btn" data-type="job-share">💼 Job share</button>
+        </div>
+        <button class="btn btn-primary" id="post-btn" style="padding:7px 18px;font-size:14px">Post</button>
+      </div>
+    </div>
+
+    <div id="feed-container">
+      <div class="empty-feed">
+        <h3>Nothing here yet</h3>
+        <p>Be the first to share an update!</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT SIDEBAR -->
+  <div class="sidebar-right">
+    <div class="people-card">
+      <div class="people-title">People you may know</div>
+      <input class="search-people" id="people-search" type="text" placeholder="Search people...">
+      <div id="people-list"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MESSAGES FAB -->
+<button class="msg-fab" id="msg-fab">
+  <svg width="22" height="22" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  <div class="msg-badge" id="msg-badge">0</div>
+</button>
+
+<!-- MESSAGES PANEL -->
+<div class="msg-panel" id="msg-panel">
+  <div class="msg-panel-header">
+    <div class="msg-panel-title">Messages</div>
+    <button class="msg-close" id="msg-close">×</button>
+  </div>
+  <div class="msg-conv-list" id="msg-conv-list"></div>
+  <div class="msg-chat" id="msg-chat">
+    <div class="msg-chat-header">
+      <button class="msg-back" id="msg-back">←</button>
+      <div class="msg-chat-name" id="msg-chat-name"></div>
+    </div>
+    <div class="msg-messages" id="msg-messages"></div>
+    <div class="msg-input-row">
+      <input class="msg-input" id="msg-input" placeholder="Write a message...">
+      <button class="msg-send" id="msg-send">
+        <svg width="14" height="14" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer') %>
+
+<script>
+  window.CURRENT_USER = <%- JSON.stringify(user) %>;
+</script>
+<script src="/js/feed.js"></script>
+</body>
+</html>
