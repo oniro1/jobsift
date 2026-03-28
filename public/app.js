@@ -294,8 +294,61 @@ function updateNav() {
   const nav = document.getElementById('nav-actions');
   if (state.user) {
     const initials = state.user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-    nav.innerHTML = `<div class="user-chip" id="user-chip" title="Click to sign out"><div class="avatar">${escHtml(initials)}</div><span class="user-name">${escHtml(state.user.name)}</span></div>`;
-    document.getElementById('user-chip').addEventListener('click', logout);
+    nav.innerHTML = `
+      <div style="position:relative" id="user-menu-wrap">
+        <div class="user-chip" id="user-chip" style="cursor:pointer">
+          <div class="avatar">${escHtml(initials)}</div>
+          <span class="user-name">${escHtml(state.user.name)}</span>
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-left:2px;color:var(--ink-3)"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div id="user-dropdown" style="
+          display:none;position:absolute;top:calc(100% + 8px);right:0;
+          background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(26,26,24,.14),0 0 0 1px rgba(26,26,24,.08);
+          min-width:200px;z-index:200;overflow:hidden;
+        ">
+          <div style="padding:14px 16px;border-bottom:1px solid var(--paper-2)">
+            <div style="font-weight:600;font-size:14px;color:var(--ink)">${escHtml(state.user.name)}</div>
+            <div style="font-size:12px;color:var(--ink-3)">${escHtml(state.user.email || '')}</div>
+          </div>
+          <div style="padding:6px">
+            <a href="profile.html" class="dropdown-item">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              My Profile
+            </a>
+            <a href="feed.html" class="dropdown-item">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+              Feed
+            </a>
+            <a href="/" class="dropdown-item">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              Search Jobs
+            </a>
+            <a href="#" class="dropdown-item" id="saved-jobs-link">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+              Saved Jobs
+            </a>
+          </div>
+          <div style="padding:6px;border-top:1px solid var(--paper-2)">
+            <button class="dropdown-item" id="dropdown-logout" style="width:100%;text-align:left;background:none;border:none;color:#c0392b;cursor:pointer;font-family:'DM Sans',sans-serif">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              Sign out
+            </button>
+          </div>
+        </div>
+      </div>`;
+
+    document.getElementById('user-chip').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const dd = document.getElementById('user-dropdown');
+      dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+    });
+
+    document.addEventListener('click', () => {
+      const dd = document.getElementById('user-dropdown');
+      if (dd) dd.style.display = 'none';
+    }, { once: false });
+
+    document.getElementById('dropdown-logout').addEventListener('click', logout);
   } else {
     nav.innerHTML = `<button class="btn btn-ghost" id="btn-login-nav">Sign in</button><button class="btn btn-primary" id="btn-register-nav">Join free</button>`;
     document.getElementById('btn-login-nav').addEventListener('click', () => openModal('login'));

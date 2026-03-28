@@ -12,6 +12,9 @@ const { fetchJobs } = require('./fetcher');
 const { extractTags } = require('./tagger');
 const { extractRequirements } = require('./requirements');
 const User = require('./models/User');
+const Post = require('./models/Post');
+const Connection = require('./models/Connection');
+const Message = require('./models/Message');
 const auth = require('./middleware/auth');
 const { sendWelcomeEmail } = require('./services/email');
 
@@ -39,20 +42,7 @@ if (process.env.NODE_ENV !== 'production') {
 const cache = new NodeCache({ stdTTL: 600 });
 
 const app = express();
-app.set('trust proxy', 1);
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
-      scriptSrcAttr: ["'none'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"],
-    }
-  }
-}));
+app.use(helmet()); // Security headers
 app.use(cors());
 app.use(express.json()); // Parse JSON bodies
 
@@ -117,9 +107,8 @@ app.post('/api/auth/register', async (req, res) => {
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
     res.json({ token, user: { id: user._id, email: user.email, name: user.name } });
   } catch (error) {
-    console.log('REGISTRATION ERROR:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
     logger.error('Registration error', { error: error.message });
-    res.status(500).json({ error: error.message || JSON.stringify(error) || 'Registration failed' });
+    res.status(500).json({ error: 'Registration failed' });
   }
 });
 
@@ -148,6 +137,22 @@ app.get('/api/user/profile', auth, async (req, res) => {
     return res.status(503).json({ error: 'Database not available' });
   }
   res.json({ user: req.user });
+});
+
+app.put('/api/user/profile', auth, async (req, res) => {
+  if (!mongoose.connection.readyState) {
+    return res.status(503).json({ error: 'Database not available' });
+  }
+  try {
+    const { name, profile } = req.body;
+    if (name) req.user.name = name;
+    if (profile) req.user.profile = { ...req.user.profile, ...profile };
+    await req.user.save();
+    res.json({ user: req.user });
+  } catch (error) {
+    logger.error('Profile update error', { error: error.message });
+    res.status(500).json({ error: error.message || 'Failed to update profile' });
+  }
 });
 
 app.post('/api/user/save-job', auth, async (req, res) => {
@@ -226,6 +231,153 @@ app.get('/api/jobs', validateQuery, async (req, res) => {
     logger.error('API Error', { error: err.message, stack: err.stack, ip: req.ip });
     res.status(500).json({ error: 'Internal server error' });
   }
+});
+
+// ── SOCIAL: POSTS ──
+app.get('/api/posts', auth, async (req, res) => {
+  try {
+    const posts = await Post.find().sort({ createdAt: -1 }).limit(50);
+    res.json(posts);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/posts', auth, async (req, res) => {
+  try {
+    const { content, type, jobRef } = req.body;
+    if (!content || content.trim().length === 0) return res.status(400).json({ error: 'Content required' });
+    const post = new Post({
+      author: req.user._id,
+      authorName: req.user.name,
+      authorHeadline: req.user.profile?.headline || '',
+      content: content.trim(),
+      type: type || 'update',
+      jobRef: jobRef || null
+    });
+    await post.save();
+    res.json(post);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/posts/:id', auth, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+    if (post.author.toString() !== req.user._id.toString()) return res.status(403).json({ error: 'Unauthorized' });
+    await post.deleteOne();
+    res.json({ message: 'Deleted' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/posts/:id/like', auth, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: 'Not found' });
+    const idx = post.likes.indexOf(req.user._id);
+    if (idx === -1) post.likes.push(req.user._id);
+    else post.likes.splice(idx, 1);
+    await post.save();
+    res.json({ likes: post.likes.length, liked: idx === -1 });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/posts/:id/comment', auth, async (req, res) => {
+  try {
+    const { content } = req.body;
+    if (!content) return res.status(400).json({ error: 'Content required' });
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: 'Not found' });
+    post.comments.push({ author: req.user._id, authorName: req.user.name, content });
+    await post.save();
+    res.json(post.comments[post.comments.length - 1]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── SOCIAL: CONNECTIONS ──
+app.get('/api/connections', auth, async (req, res) => {
+  try {
+    const connections = await Connection.find({
+      $or: [{ requester: req.user._id }, { recipient: req.user._id }]
+    }).populate('requester recipient', 'name profile.headline profile.location');
+    res.json(connections);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/users/search', auth, async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) return res.json([]);
+    const users = await User.find({
+      _id: { $ne: req.user._id },
+      $or: [
+        { name: { $regex: q, $options: 'i' } },
+        { 'profile.headline': { $regex: q, $options: 'i' } }
+      ]
+    }).select('name profile.headline profile.location').limit(10);
+    res.json(users);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/connections/request', auth, async (req, res) => {
+  try {
+    const { recipientId } = req.body;
+    const existing = await Connection.findOne({
+      $or: [
+        { requester: req.user._id, recipient: recipientId },
+        { requester: recipientId, recipient: req.user._id }
+      ]
+    });
+    if (existing) return res.status(400).json({ error: 'Connection already exists' });
+    const conn = new Connection({ requester: req.user._id, recipient: recipientId });
+    await conn.save();
+    res.json(conn);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/connections/:id', auth, async (req, res) => {
+  try {
+    const { status } = req.body;
+    const conn = await Connection.findById(req.params.id);
+    if (!conn) return res.status(404).json({ error: 'Not found' });
+    if (conn.recipient.toString() !== req.user._id.toString()) return res.status(403).json({ error: 'Unauthorized' });
+    conn.status = status;
+    await conn.save();
+    res.json(conn);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── SOCIAL: MESSAGES ──
+app.get('/api/messages/:userId', auth, async (req, res) => {
+  try {
+    const messages = await Message.find({
+      $or: [
+        { sender: req.user._id, recipient: req.params.userId },
+        { sender: req.params.userId, recipient: req.user._id }
+      ]
+    }).sort({ createdAt: 1 });
+    await Message.updateMany({ sender: req.params.userId, recipient: req.user._id, read: false }, { read: true });
+    res.json(messages);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/messages', auth, async (req, res) => {
+  try {
+    const { recipientId, content } = req.body;
+    if (!content || !recipientId) return res.status(400).json({ error: 'Missing fields' });
+    const msg = new Message({ sender: req.user._id, recipient: recipientId, content });
+    await msg.save();
+    res.json(msg);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/messages', auth, async (req, res) => {
+  try {
+    const conversations = await Message.aggregate([
+      { $match: { $or: [{ sender: req.user._id }, { recipient: req.user._id }] } },
+      { $sort: { createdAt: -1 } },
+      { $group: { _id: { $cond: [{ $eq: ['$sender', req.user._id] }, '$recipient', '$sender'] }, lastMessage: { $first: '$$ROOT' }, unread: { $sum: { $cond: [{ $and: [{ $eq: ['$recipient', req.user._id] }, { $eq: ['$read', false] }] }, 1, 0] } } } },
+    ]);
+    res.json(conversations);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/health', (req, res) => {
